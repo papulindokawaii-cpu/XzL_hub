@@ -550,7 +550,8 @@ TargetASBtn.MouseButton1Click:Connect(function()
     TargetASBtn.Text = "  Target Part: " .. targetAutoS .. "  ↕"
 end)
 
-CreateSectionTitle(CombateTab, "Silent Aimbot", 9, function()
+CreateSectionTitle(CombateTab, "Silent Aimbot", 8)
+CreateOptionButton(CombateTab, "🎯 Silent Aimbot", 9, function()
     silentAimbotEnabled = not silentAimbotEnabled
     print("Silent Aimbot: " .. tostring(silentAimbotEnabled))
 end)
@@ -889,4 +890,4 @@ ToggleMenuButton.MouseButton1Click:Connect(function()
     MainWindow.Visible = not MainWindow.Visible
 end)
 
-print("¡XzL-Hub con interfaz y lógica
+print("¡XzL-Hub con interfaz y lógica completa funcional
