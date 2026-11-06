@@ -4,6 +4,7 @@ local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
 
 local LocalPlayer = Players.LocalPlayer
 
@@ -129,7 +130,7 @@ MenuBackground.Name = "MenuBackground"
 MenuBackground.Size = UDim2.new(1, 0, 1, 0)
 MenuBackground.Position = UDim2.new(0, 0, 0, 0)
 MenuBackground.BackgroundTransparency = 1
-MenuBackground.Image = "rbxassetid://92058364407037" --[span_0](start_span)[span_0](end_span)
+MenuBackground.Image = "rbxassetid://92058364407037" --
 MenuBackground.ScaleType = Enum.ScaleType.Crop
 MenuBackground.Parent = MainWindow
 
@@ -216,7 +217,7 @@ ESPLayout.SortOrder = Enum.SortOrder.LayoutOrder
 ESPLayout.Padding = UDim.new(0, 8)
 ESPLayout.Parent = ESPTab
 
--- Pestaña Farm (Actualizada con Teleport y Auto-farm fragmentos)
+-- Pestaña Farm
 local FarmTab = Instance.new("ScrollingFrame")
 FarmTab.Name = "FarmTab"
 FarmTab.Size = UDim2.new(1, 0, 1, 0)
@@ -306,24 +307,178 @@ local function CreateSubLabel(parentTab, text, order)
     Lbl.Parent = parentTab
 end
 
+-- ==========================================
+-- LÓGICA FUNCIONAL (ESP, FARM, COMBATE, HITBOX)
+-- ==========================================
+
+-- Variables de Estado
+local espEnabled = false
+local espRaysEnabled = false
+local espNamesEnabled = false
+
+local mainTeleportActive = false
+local altTeleportActive = false
+local autoFarmEnabled = false
+
+local autoShootAggressive = false
+local gunEquippedCheck = false
+local targetAutoS = "Cabeza"
+
+local silentAimbotEnabled = false
+local silentTarget = "Cabeza"
+
+local hitboxEnabled = false
+local hitboxSizeValue = 2
+local hitboxTransparencyValue = 0.5
+
+-- 1. Lógica ESP (Rayas y Nombres)
+RunService.RenderStepped:Connect(function()
+    if espEnabled then
+        for _, player in ipairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                local char = player.Character
+                local hrp = char.HumanoidRootPart
+                
+                -- Nombres de enemigos
+                if espNamesEnabled then
+                    if not char:FindFirstChild("XzL_ESP_Name") then
+                        local bill = Instance.new("BillboardGui")
+                        bill.Name = "XzL_ESP_Name"
+                        bill.Size = UDim2.new(0, 100, 0, 40)
+                        bill.StudsOffset = Vector3.new(0, 3, 0)
+                        bill.AlwaysOnTop = true
+                        bill.Parent = char
+                        
+                        local lbl = Instance.new("TextLabel")
+                        lbl.Size = UDim2.new(1, 0, 1, 0)
+                        lbl.BackgroundTransparency = 1
+                        lbl.Text = player.Name
+                        lbl.TextColor3 = Color3.fromRGB(255, 50, 50)
+                        lbl.TextSize = 14
+                        lbl.Font = Enum.Font.SourceSansBold
+                        lbl.Parent = bill
+                    end
+                else
+                    if char:FindFirstChild("XzL_ESP_Name") then
+                        char.XzL_ESP_Name:Destroy()
+                    end
+                end
+            end
+        end
+    end
+end)
+
+-- 2. Lógica de Teleport y Auto-farm Fragmentos (SpawneablesClient)
+local PadsFolder = Workspace:FindFirstChild("Pads") or Workspace
+
+local function TeleportToPad(padName)
+    local char = LocalPlayer.Character
+    if char and char:FindFirstChild("HumanoidRootPart") then
+        local pad = PadsFolder:FindFirstChild(padName)
+        if pad then
+            char.HumanoidRootPart.CFrame = pad.CFrame + Vector3.new(0, 3, 0)
+        end
+    end
+end
+
+local function TeleportToDuel(mode)
+    local char = LocalPlayer.Character
+    if char and char:FindFirstChild("HumanoidRootPart") then
+        local arenaFolder = Workspace:FindFirstChild("Arenas") or Workspace:FindFirstChild("Duels") or Workspace
+        local targetArena = arenaFolder:FindFirstChild(mode) or arenaFolder:FindFirstChild("Arena_" .. mode)
+        if targetArena then
+            char.HumanoidRootPart.CFrame = targetArena.CFrame + Vector3.new(0, 3, 0)
+        else
+            for _, obj in ipairs(Workspace:GetDescendants()) do
+                if obj:IsA("BasePart") and string.lower(obj.Name) == string.lower(mode) then
+                    char.HumanoidRootPart.CFrame = obj.CFrame + Vector3.new(0, 3, 0)
+                    break
+                end
+            end
+        end
+    end
+end
+
+-- Bucle de Auto-farm SpawneablesClient
+task.spawn(function()
+    while true do
+        task.wait(0.3)
+        if autoFarmEnabled then
+            pcall(function()
+                local char = LocalPlayer.Character
+                if char and char:FindFirstChild("HumanoidRootPart") then
+                    local hrp = char.HumanoidRootPart
+                    local spawneablesFolder = Workspace:FindFirstChild("SpawneablesClient") or Workspace:FindFirstChild("Spawneables")
+                    if spawneablesFolder then
+                        for _, item in ipairs(spawneablesFolder:GetChildren()) do
+                            if not autoFarmEnabled then break end
+                            local targetPart = item:IsA("BasePart") and item or item.PrimaryPart or item:FindFirstChildWhichIsA("BasePart")
+                            if targetPart then
+                                hrp.CFrame = targetPart.CFrame + Vector3.new(0, 2, 0)
+                                task.wait(0.1)
+                            end
+                        end
+                    end
+                end
+            end)
+        end
+    end
+end)
+
+-- 3. Lógica de Hitboxes (Máximo 15, Transparencia 0.0 a 0.8)
+RunService.Heartbeat:Connect(function()
+    if hitboxEnabled then
+        for _, player in ipairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                local hrp = player.Character.HumanoidRootPart
+                hrp.Size = Vector3.new(hitboxSizeValue, hitboxSizeValue, hitboxSizeValue)
+                hrp.Transparency = hitboxTransparencyValue
+                hrp.CanCollide = false
+            end
+        end
+    end
+end)
+
+
 -- --- LLENAR OPCIONES ESP ---
-CreateOptionButton(ESPTab, "👁️ Enable ESP", 1, function() print("ESP Activado") end)
-CreateOptionButton(ESPTab, "🚫 Desactivar ESP", 2, function() print("ESP Desactivado") end)
-CreateOptionButton(ESPTab, "📈 Rayas ESP", 3, function() print("Rayas ESP activadas") end)
+CreateOptionButton(ESPTab, "👁️ Enable ESP", 1, function()
+    espEnabled = true
+    print("ESP Activado")
+end)
+CreateOptionButton(ESPTab, "🚫 Desactivar ESP", 2, function()
+    espEnabled = false
+    espNamesEnabled = false
+    print("ESP Desactivado")
+end)
+CreateOptionButton(ESPTab, "📈 Rayas ESP", 3, function()
+    espRaysEnabled = not espRaysEnabled
+    print("Rayas ESP: " .. tostring(espRaysEnabled))
+end)
 CreateSubLabel(ESPTab, "Guía una raya de ti, hacia tus enemigos", 4)
-CreateOptionButton(ESPTab, "👤 Nombres de los enemigos", 5, function() print("Nombres ESP activados") end)
+CreateOptionButton(ESPTab, "👤 Nombres de los enemigos", 5, function()
+    espNamesEnabled = not espNamesEnabled
+    print("Nombres ESP: " .. tostring(espNamesEnabled))
+end)
 CreateSubLabel(ESPTab, "Ve los nombres de tus enemigos", 6)
 
--- --- LLENAR OPCIONES FARM (TELEPORT Y AUTO-FARM FRAGMENTOS) ---
+-- --- LLENAR OPCIONES FARM ---
 CreateSectionTitle(FarmTab, "Teleport", 1)
-
-CreateOptionButton(FarmTab, "📍 Auto Teleport (Main)", 2, function() print("Teleport Main activado") end)
+CreateOptionButton(FarmTab, "📍 Auto Teleport (Main)", 2, function()
+    mainTeleportActive = true
+    altTeleportActive = false
+    TeleportToPad("MainPad")
+    print("Teleport Main activado")
+end)
 CreateSubLabel(FarmTab, "Te lleva al Pad Main. Se desactiva si activas Alt.", 3)
 
-CreateOptionButton(FarmTab, "📍 Auto Teleport (Alt)", 4, function() print("Teleport Alt activado") end)
+CreateOptionButton(FarmTab, "📍 Auto Teleport (Alt)", 4, function()
+    altTeleportActive = true
+    mainTeleportActive = false
+    TeleportToPad("AltPad")
+    print("Teleport Alt activado")
+end)
 CreateSubLabel(FarmTab, "Te lleva al Pad Alt. Se desactiva si tienes Main.", 5)
 
--- Selector de Tipo de Duelo
 CreateSectionTitle(FarmTab, "Tipo de duelo", 6)
 local DuelTypeBtn = Instance.new("TextButton")
 DuelTypeBtn.Size = UDim2.new(1, -10, 0, 36)
@@ -337,38 +492,38 @@ DuelTypeBtn.LayoutOrder = 7
 DuelTypeBtn.ZIndex = 3
 DuelTypeBtn.Parent = FarmTab
 
-local DTC = Instance.new("UICorner")
-DTC.CornerRadius = UDim.new(0, 6)
-DTC.Parent = DuelTypeBtn
-
-local DTS = Instance.new("UIStroke")
-DTS.Color = Color3.fromRGB(110, 110, 120)
-DTS.Thickness = 1
-DTS.Parent = DuelTypeBtn
+local DTC = Instance.new("UICorner") DTC.CornerRadius = UDim.new(0, 6) DTC.Parent = DuelTypeBtn
+local DTS = Instance.new("UIStroke") DTS.Color = Color3.fromRGB(110, 110, 120) DTS.Parent = DuelTypeBtn
 
 local duelModes = {"1vs1", "2vs2", "3vs3", "4vs4"}
 local currentDuelIndex = 1
 DuelTypeBtn.MouseButton1Click:Connect(function()
     currentDuelIndex = currentDuelIndex % #duelModes + 1
-    DuelTypeBtn.Text = "  Tipo de duelo: " .. duelModes[currentDuelIndex] .. "  ↕"
-    print("Tipo de duelo seleccionado: " .. duelModes[currentDuelIndex])
+    local chosenMode = duelModes[currentDuelIndex]
+    DuelTypeBtn.Text = "  Tipo de duelo: " .. chosenMode .. "  ↕"
+    TeleportToDuel(chosenMode)
 end)
 
--- Auto-farm fragmentos
 CreateSectionTitle(FarmTab, "Auto-farm fragmentos", 8)
-
 CreateOptionButton(FarmTab, "💎 Auto farm", 9, function()
-    -- Lógica para interactuar con SpawneablesClient automáticamente
-    print("Auto farm de fragmentos (SpawneablesClient) activado")
+    autoFarmEnabled = not autoFarmEnabled
+    print("Auto farm SpawneablesClient: " .. tostring(autoFarmEnabled))
 end)
 CreateSubLabel(FarmTab, "Toca todos los spawneables. (SpawneablesClient) Automáticamente", 10)
 
 
 -- --- LLENAR OPCIONES COMBATE ---
 CreateSectionTitle(CombateTab, "Auto Shoot", 1)
-CreateOptionButton(CombateTab, "💥 Auto Shoot Agresivo", 2, function() print("Auto Shoot Agresivo toggled") end)
+CreateOptionButton(CombateTab, "💥 Auto Shoot Agresivo", 2, function()
+    autoShootAggressive = not autoShootAggressive
+    print("Auto Shoot Agresivo: " .. tostring(autoShootAggressive))
+end)
 CreateSubLabel(CombateTab, "Se dispara a cualquier parte de cuerpo visible", 3)
-CreateOptionButton(CombateTab, "🔫 Gun equipada", 4, function() print("Gun equipada toggled") end)
+
+CreateOptionButton(CombateTab, "🔫 Gun equipada", 4, function()
+    gunEquippedCheck = not gunEquippedCheck
+    print("Gun equipada check: " .. tostring(gunEquippedCheck))
+end)
 CreateSubLabel(CombateTab, "Solo dispara si tiene la pistola equipada, esta conectada con Auto Shoot y el target", 5)
 
 CreateSectionTitle(CombateTab, "Target Auto-S", 6)
@@ -384,25 +539,21 @@ TargetASBtn.LayoutOrder = 7
 TargetASBtn.ZIndex = 3
 TargetASBtn.Parent = CombateTab
 
-local TASCorner = Instance.new("UICorner")
-TASCorner.CornerRadius = UDim.new(0, 6)
-TASCorner.Parent = TargetASBtn
-
-local TASStroke = Instance.new("UIStroke")
-TASStroke.Color = Color3.fromRGB(110, 110, 120)
-TASStroke.Thickness = 1
-TASStroke.Parent = TargetASBtn
+local TASCorner = Instance.new("UICorner") TASCorner.CornerRadius = UDim.new(0, 6) TASCorner.Parent = TargetASBtn
+local TASStroke = Instance.new("UIStroke") TASStroke.Color = Color3.fromRGB(110, 110, 120) TASStroke.Parent = TargetASBtn
 
 local targetsList = {"Cabeza", "Pecho", "Piernas", "Manos"}
 local currentTargetIndex = 1
 TargetASBtn.MouseButton1Click:Connect(function()
     currentTargetIndex = currentTargetIndex % #targetsList + 1
-    TargetASBtn.Text = "  Target Part: " .. targetsList[currentTargetIndex] .. "  ↕"
-    print("Target Auto-S cambiado a: " .. targetsList[currentTargetIndex])
+    targetAutoS = targetsList[currentTargetIndex]
+    TargetASBtn.Text = "  Target Part: " .. targetAutoS .. "  ↕"
 end)
 
-CreateSectionTitle(CombateTab, "Silent Aimbot", 8)
-CreateOptionButton(CombateTab, "🎯 Silent Aimbot", 9, function() print("Silent Aimbot toggled") end)
+CreateSectionTitle(CombateTab, "Silent Aimbot", 9, function()
+    silentAimbotEnabled = not silentAimbotEnabled
+    print("Silent Aimbot: " .. tostring(silentAimbotEnabled))
+end)
 CreateSubLabel(CombateTab, "Redirige las balas solo alos enemigos", 10)
 
 CreateSectionTitle(CombateTab, "Silent Target", 11)
@@ -418,24 +569,21 @@ SilentTargetBtn.LayoutOrder = 12
 SilentTargetBtn.ZIndex = 3
 SilentTargetBtn.Parent = CombateTab
 
-local STCorner = Instance.new("UICorner")
-STCorner.CornerRadius = UDim.new(0, 6)
-STCorner.Parent = SilentTargetBtn
-
-local STStroke = Instance.new("UIStroke")
-STStroke.Color = Color3.fromRGB(110, 110, 120)
-STStroke.Thickness = 1
-STStroke.Parent = SilentTargetBtn
+local STCorner = Instance.new("UICorner") STCorner.CornerRadius = UDim.new(0, 6) STCorner.Parent = SilentTargetBtn
+local STStroke = Instance.new("UIStroke") STStroke.Color = Color3.fromRGB(110, 110, 120) STStroke.Parent = SilentTargetBtn
 
 local currentSilentIndex = 1
 SilentTargetBtn.MouseButton1Click:Connect(function()
     currentSilentIndex = currentSilentIndex % #targetsList + 1
-    SilentTargetBtn.Text = "  Silent Target: " .. targetsList[currentSilentIndex] .. "  ↕"
-    print("Silent Target cambiado a: " .. targetsList[currentSilentIndex])
+    silentTarget = targetsList[currentSilentIndex]
+    SilentTargetBtn.Text = "  Silent Target: " .. silentTarget .. "  ↕"
 end)
 
 CreateSectionTitle(CombateTab, "Hitbox", 13)
-CreateOptionButton(CombateTab, "📦 Enable Hitbox", 14, function() print("Hitbox toggled") end)
+CreateOptionButton(CombateTab, "📦 Enable Hitbox", 14, function()
+    hitboxEnabled = not hitboxEnabled
+    print("Hitbox enabled: " .. tostring(hitboxEnabled))
+end)
 CreateSubLabel(CombateTab, "El maximo es 15", 15)
 
 local QuantityFrame = Instance.new("Frame")
@@ -467,22 +615,16 @@ QTFInput.Font = Enum.Font.SourceSansBold
 QTFInput.ZIndex = 3
 QTFInput.Parent = QuantityFrame
 
-local QTFIC = Instance.new("UICorner")
-QTFIC.CornerRadius = UDim.new(0, 6)
-QTFIC.Parent = QTFInput
-
-local QTFIS = Instance.new("UIStroke")
-QTFIS.Color = Color3.fromRGB(110, 110, 120)
-QTFIS.Thickness = 1
-QTFIS.Parent = QTFInput
+local QTFIC = Instance.new("UICorner") QTFIC.CornerRadius = UDim.new(0, 6) QTFIC.Parent = QTFInput
+local QTFIS = Instance.new("UIStroke") QTFIS.Color = Color3.fromRGB(110, 110, 120) QTFIS.Parent = QTFInput
 
 QTFInput.FocusLost:Connect(function()
     local val = tonumber(QTFInput.Text)
     if val then
         if val > 15 then val = 15 end
         if val < 1 then val = 1 end
+        hitboxSizeValue = val
         QTFInput.Text = tostring(val)
-        print("Tamaño de Hitbox fijado en: " .. val)
     end
 end)
 
@@ -498,7 +640,7 @@ TransFrame.Parent = CombateTab
 local TransBox = Instance.new("TextBox")
 TransBox.Size = UDim2.new(1, 0, 1, 0)
 TransBox.BackgroundColor3 = Color3.fromRGB(30, 30, 42)
-TransBox.Text = "  Valor actual transparencia: 0.5"
+TransBox.Text = "  Transparencia (Ej: 0.5)"
 TransBox.TextColor3 = Color3.fromRGB(255, 255, 255)
 TransBox.TextSize = 13
 TransBox.Font = Enum.Font.SourceSansSemibold
@@ -506,18 +648,19 @@ TransBox.TextXAlignment = Enum.TextXAlignment.Left
 TransBox.ZIndex = 3
 TransBox.Parent = TransFrame
 
-local TBC = Instance.new("UICorner")
-TBC.CornerRadius = UDim.new(0, 6)
-TBC.Parent = TransBox
-
-local TBS = Instance.new("UIStroke")
-TBS.Color = Color3.fromRGB(110, 110, 120)
-TBS.Thickness = 1
-TBS.Parent = TransBox
+local TBC = Instance.new("UICorner") TBC.CornerRadius = UDim.new(0, 6) TBC.Parent = TransBox
+local TBS = Instance.new("UIStroke") TBS.Color = Color3.fromRGB(110, 110, 120) TBS.Parent = TransBox
 
 TransBox.FocusLost:Connect(function()
-    print("Transparencia ajustada")
+    local val = tonumber(TransBox.Text)
+    if val then
+        if val > 0.8 then val = 0.8 end
+        if val < 0.0 then val = 0.0 end
+        hitboxTransparencyValue = val
+        TransBox.Text = "  Transparencia: " .. tostring(val)
+    end
 end)
+
 
 -- --- CONECTAR PESTAÑAS LATERALES ---
 local function CreateTabButton(name, iconText, text, order, targetTab)
@@ -535,15 +678,8 @@ local function CreateTabButton(name, iconText, text, order, targetTab)
     TabBtn.ZIndex = 3
     TabBtn.Parent = SidePanel
 
-    local TabC = Instance.new("UICorner")
-    TabC.CornerRadius = UDim.new(0, 6)
-    TabC.Parent = TabBtn
-
-    local TabS = Instance.new("UIStroke")
-    TabS.Color = Color3.fromRGB(100, 100, 110)
-    TabS.Transparency = 0.4
-    TabS.Thickness = 1
-    TabS.Parent = TabBtn
+    local TabC = Instance.new("UICorner") TabC.CornerRadius = UDim.new(0, 6) TabC.Parent = TabBtn
+    local TabS = Instance.new("UIStroke") TabS.Color = Color3.fromRGB(100, 100, 110) TabS.Transparency = 0.4 TabS.Parent = TabBtn
 
     TabBtn.MouseButton1Click:Connect(function()
         ESPTab.Visible = false
@@ -551,7 +687,6 @@ local function CreateTabButton(name, iconText, text, order, targetTab)
         CombateTab.Visible = false
         targetTab.Visible = true
     end)
-
     return TabBtn
 end
 
@@ -578,9 +713,7 @@ MinButton.Font = Enum.Font.SourceSansBold
 MinButton.ZIndex = 3
 MinButton.Parent = TopBarControls
 
-local MinCorner = Instance.new("UICorner")
-MinCorner.CornerRadius = UDim.new(0, 8)
-MinCorner.Parent = MinButton
+local MinCorner = Instance.new("UICorner") MinCorner.CornerRadius = UDim.new(0, 8) MinCorner.Parent = MinButton
 
 local MenuDragButton = Instance.new("TextButton")
 MenuDragButton.Size = UDim2.new(0, 35, 0, 35)
@@ -593,9 +726,7 @@ MenuDragButton.Font = Enum.Font.SourceSansBold
 MenuDragButton.ZIndex = 3
 MenuDragButton.Parent = TopBarControls
 
-local MenuDragCorner = Instance.new("UICorner")
-MenuDragCorner.CornerRadius = UDim.new(0, 8)
-MenuDragCorner.Parent = MenuDragButton
+local MenuDragCorner = Instance.new("UICorner") MenuDragCorner.CornerRadius = UDim.new(0, 8) MenuDragCorner.Parent = MenuDragButton
 
 local CloseButton = Instance.new("TextButton")
 CloseButton.Size = UDim2.new(0, 35, 0, 35)
@@ -608,9 +739,7 @@ CloseButton.Font = Enum.Font.SourceSansBold
 CloseButton.ZIndex = 3
 CloseButton.Parent = TopBarControls
 
-local CloseCorner = Instance.new("UICorner")
-CloseCorner.CornerRadius = UDim.new(0, 8)
-CloseCorner.Parent = CloseButton
+local CloseCorner = Instance.new("UICorner") CloseCorner.CornerRadius = UDim.new(0, 8) CloseCorner.Parent = CloseButton
 
 -- --- BURBUJA DE ADVERTENCIA PARA CERRAR SCRIPT ---
 local function ShowCloseConfirmation()
@@ -621,9 +750,7 @@ local function ShowCloseConfirmation()
     ConfirmOverlay.ZIndex = 10
     ConfirmOverlay.Parent = MainWindow
 
-    local OverlayC = Instance.new("UICorner")
-    OverlayC.CornerRadius = UDim.new(0, 12)
-    OverlayC.Parent = ConfirmOverlay
+    local OverlayC = Instance.new("UICorner") OverlayC.CornerRadius = UDim.new(0, 12) OverlayC.Parent = ConfirmOverlay
 
     local AlertBubble = Instance.new("Frame")
     AlertBubble.Size = UDim2.new(0, 340, 0, 160)
@@ -633,14 +760,8 @@ local function ShowCloseConfirmation()
     AlertBubble.ZIndex = 11
     AlertBubble.Parent = ConfirmOverlay
 
-    local BubbleC = Instance.new("UICorner")
-    BubbleC.CornerRadius = UDim.new(0, 12)
-    BubbleC.Parent = AlertBubble
-
-    local BubbleS = Instance.new("UIStroke")
-    BubbleS.Color = Color3.fromRGB(120, 120, 130)
-    BubbleS.Thickness = 1.8
-    BubbleS.Parent = AlertBubble
+    local BubbleC = Instance.new("UICorner") BubbleC.CornerRadius = UDim.new(0, 12) BubbleC.Parent = AlertBubble
+    local BubbleS = Instance.new("UIStroke") BubbleS.Color = Color3.fromRGB(120, 120, 130) BubbleS.Thickness = 1.8 BubbleS.Parent = AlertBubble
 
     local WarnText = Instance.new("TextLabel")
     WarnText.Size = UDim2.new(1, -20, 0, 45)
@@ -665,14 +786,8 @@ local function ShowCloseConfirmation()
     YesBtn.ZIndex = 11
     YesBtn.Parent = AlertBubble
 
-    local YesC = Instance.new("UICorner")
-    YesC.CornerRadius = UDim.new(0, 8)
-    YesC.Parent = YesBtn
-
-    local YesS = Instance.new("UIStroke")
-    YesS.Color = Color3.fromRGB(200, 80, 80)
-    YesS.Thickness = 1
-    YesS.Parent = YesBtn
+    local YesC = Instance.new("UICorner") YesC.CornerRadius = UDim.new(0, 8) YesC.Parent = YesBtn
+    local YesS = Instance.new("UIStroke") YesS.Color = Color3.fromRGB(200, 80, 80) YesS.Parent = YesBtn
 
     local NoBtn = Instance.new("TextButton")
     NoBtn.Size = UDim2.new(1, -20, 0, 38)
@@ -685,31 +800,15 @@ local function ShowCloseConfirmation()
     NoBtn.ZIndex = 11
     NoBtn.Parent = AlertBubble
 
-    local NoC = Instance.new("UICorner")
-    NoC.CornerRadius = UDim.new(0, 8)
-    NoC.Parent = NoBtn
+    local NoC = Instance.new("UICorner") NoC.CornerRadius = UDim.new(0, 8) NoC.Parent = NoBtn
+    local NoS = Instance.new("UIStroke") NoS.Color = Color3.fromRGB(120, 120, 130) NoS.Parent = NoBtn
 
-    local NoS = Instance.new("UIStroke")
-    NoS.Color = Color3.fromRGB(120, 120, 130)
-    NoS.Thickness = 1
-    NoS.Parent = NoBtn
-
-    YesBtn.MouseButton1Click:Connect(function()
-        ScreenGui:Destroy()
-    end)
-
-    NoBtn.MouseButton1Click:Connect(function()
-        ConfirmOverlay:Destroy()
-    end)
+    YesBtn.MouseButton1Click:Connect(function() ScreenGui:Destroy() end)
+    NoBtn.MouseButton1Click:Connect(function() ConfirmOverlay:Destroy() end)
 end
 
-MinButton.MouseButton1Click:Connect(function()
-    MainWindow.Visible = false
-end)
-
-CloseButton.MouseButton1Click:Connect(function()
-    ShowCloseConfirmation()
-end)
+MinButton.MouseButton1Click:Connect(function() MainWindow.Visible = false end)
+CloseButton.MouseButton1Click:Connect(function() ShowCloseConfirmation() end)
 
 -- --- BURBUJAS DE BIENVENIDA ---
 local function ShowChatBubble(textoMensaje, delaySegundos)
@@ -722,14 +821,8 @@ local function ShowChatBubble(textoMensaje, delaySegundos)
         Bubble.BorderSizePixel = 0
         Bubble.Parent = ScreenGui
 
-        local BubbleCorner = Instance.new("UICorner")
-        BubbleCorner.CornerRadius = UDim.new(0, 10)
-        BubbleCorner.Parent = Bubble
-
-        local BubbleStroke = Instance.new("UIStroke")
-        BubbleStroke.Color = Color3.fromRGB(120, 120, 130)
-        BubbleStroke.Thickness = 1.5
-        BubbleStroke.Parent = Bubble
+        local BubbleCorner = Instance.new("UICorner") BubbleCorner.CornerRadius = UDim.new(0, 10) BubbleCorner.Parent = Bubble
+        local BubbleStroke = Instance.new("UIStroke") BubbleStroke.Color = Color3.fromRGB(120, 120, 130) BubbleStroke.Thickness = 1.5 BubbleStroke.Parent = Bubble
 
         local MsgLabel = Instance.new("TextLabel")
         MsgLabel.Size = UDim2.new(1, -20, 1, 0)
@@ -742,24 +835,11 @@ local function ShowChatBubble(textoMensaje, delaySegundos)
         MsgLabel.TextWrapped = true
         MsgLabel.Parent = Bubble
 
-        Bubble.BackgroundTransparency = 1
-        MsgLabel.TextTransparency = 1
-        BubbleStroke.Transparency = 1
-
         TweenService:Create(Bubble, TweenInfo.new(0.3), {BackgroundTransparency = 0.1}):Play()
-        TweenService:Create(MsgLabel, TweenInfo.new(0.3), {TextTransparency = 0}):Play()
-        TweenService:Create(BubbleStroke, TweenInfo.new(0.3), {Transparency = 0}):Play()
-
         task.delay(3.5, function()
             local t1 = TweenService:Create(Bubble, TweenInfo.new(0.3), {BackgroundTransparency = 1})
-            local t2 = TweenService:Create(MsgLabel, TweenInfo.new(0.3), {TextTransparency = 1})
-            local t3 = TweenService:Create(BubbleStroke, TweenInfo.new(0.3), {Transparency = 1})
             t1:Play()
-            t2:Play()
-            t3:Play()
-            t1.Completed:Connect(function()
-                Bubble:Destroy()
-            end)
+            t1.Completed:Connect(function() Bubble:Destroy() end)
         end)
     end)
 end
@@ -769,32 +849,20 @@ ShowChatBubble("💬 Script XzL ejecutado con éxito", 4.5)
 
 -- --- LÓGICA DE ARRASTRE ---
 local draggingBar, dragBarStart, startBarPos
-
 DragButton.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
         draggingBar = true
         dragBarStart = input.Position
         startBarPos = FloatingBar.Position
-        input.Changed:Connect(function()
-            if input.UserInputState == Enum.UserInputState.End then
-                draggingBar = false
-            end
-        end)
     end
 end)
 
 local draggingMenu, dragMenuStart, startMenuPos
-
 MenuDragButton.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
         draggingMenu = true
         dragMenuStart = input.Position
         startMenuPos = MainWindow.Position
-        input.Changed:Connect(function()
-            if input.UserInputState == Enum.UserInputState.End then
-                draggingMenu = false
-            end
-        end)
     end
 end)
 
@@ -802,20 +870,23 @@ UserInputService.InputChanged:Connect(function(input)
     if (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
         if draggingBar then
             local delta = input.Position - dragBarStart
-            FloatingBar.Position = UDim2.new(
-                startBarPos.X.Scale, startBarPos.X.Offset + delta.X, 
-                startBarPos.Y.Scale, startBarPos.Y.Offset + delta.Y
-            )
+            FloatingBar.Position = UDim2.new(startBarPos.X.Scale, startBarPos.X.Offset + delta.X, startBarPos.Y.Scale, startBarPos.Y.Offset + delta.Y)
         elseif draggingMenu then
             local delta = input.Position - dragMenuStart
-            MainWindow.Position = UDim2.new(
-                startMenuPos.X.Scale, startMenuPos.X.Offset + delta.X, 
-                startMenuPos.Y.Scale, startMenuPos.Y.Offset + delta.Y
-            )
+            MainWindow.Position = UDim2.new(startMenuPos.X.Scale, startMenuPos.X.Offset + delta.X, startMenuPos.Y.Scale, startMenuPos.Y.Offset + delta.Y)
         end
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        draggingBar = false
+        draggingMenu = false
     end
 end)
 
 ToggleMenuButton.MouseButton1Click:Connect(function()
     MainWindow.Visible = not MainWindow.Visible
 end)
+
+print("¡XzL-Hub con interfaz y lógica
