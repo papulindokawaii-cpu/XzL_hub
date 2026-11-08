@@ -550,7 +550,7 @@ TargetASBtn.MouseButton1Click:Connect(function()
     TargetASBtn.Text = "  Target Part: " .. targetAutoS .. "  ↕"
 end)
 
-CreateSectionTitle(CombateTab, "Silent Aimbot", 8)
+CreateSectionTitle(CombateTab, "Silent Aimbot",CombateTab, "Silent Aimbot", 8)
 CreateOptionButton(CombateTab, "🎯 Silent Aimbot", 9, function()
     silentAimbotEnabled = not silentAimbotEnabled
     print("Silent Aimbot: " .. tostring(silentAimbotEnabled))
@@ -890,4 +890,179 @@ ToggleMenuButton.MouseButton1Click:Connect(function()
     MainWindow.Visible = not MainWindow.Visible
 end)
 
-print("¡XzL-Hub con interfaz y lógica completa funcional
+print("¡XzL-Hub con interfaz y lógica completa funcional cargado con éxito!")
+("TextButton")
+MenuDragButton.Size = UDim2.new(0, 35, 0, 35)
+MenuDragButton.Position = UDim2.new(0, 40, 0, 0)
+MenuDragButton.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+MenuDragButton.Text = "+"
+MenuDragButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+MenuDragButton.TextSize = 20
+MenuDragButton.Font = Enum.Font.SourceSansBold
+MenuDragButton.ZIndex = 3
+MenuDragButton.Parent = TopBarControls
+
+local MenuDragCorner = Instance.new("UICorner") MenuDragCorner.CornerRadius = UDim.new(0, 8) MenuDragCorner.Parent = MenuDragButton
+
+local CloseButton = Instance.new("TextButton")
+CloseButton.Size = UDim2.new(0, 35, 0, 35)
+CloseButton.Position = UDim2.new(0, 80, 0, 0)
+CloseButton.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+CloseButton.Text = "X"
+CloseButton.TextColor3 = Color3.fromRGB(255, 100, 100)
+CloseButton.TextSize = 16
+CloseButton.Font = Enum.Font.SourceSansBold
+CloseButton.ZIndex = 3
+CloseButton.Parent = TopBarControls
+
+local CloseCorner = Instance.new("UICorner") CloseCorner.CornerRadius = UDim.new(0, 8) CloseCorner.Parent = CloseButton
+
+-- --- BURBUJA DE ADVERTENCIA PARA CERRAR SCRIPT ---
+local function ShowCloseConfirmation()
+    local ConfirmOverlay = Instance.new("Frame")
+    ConfirmOverlay.Size = UDim2.new(1, 0, 1, 0)
+    ConfirmOverlay.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    ConfirmOverlay.BackgroundTransparency = 0.5
+    ConfirmOverlay.ZIndex = 10
+    ConfirmOverlay.Parent = MainWindow
+
+    local OverlayC = Instance.new("UICorner") OverlayC.CornerRadius = UDim.new(0, 12) OverlayC.Parent = ConfirmOverlay
+
+    local AlertBubble = Instance.new("Frame")
+    AlertBubble.Size = UDim2.new(0, 340, 0, 160)
+    AlertBubble.Position = UDim2.new(0.5, -170, 0.5, -80)
+    AlertBubble.BackgroundColor3 = Color3.fromRGB(15, 15, 22)
+    AlertBubble.BorderSizePixel = 0
+    AlertBubble.ZIndex = 11
+    AlertBubble.Parent = ConfirmOverlay
+
+    local BubbleC = Instance.new("UICorner") BubbleC.CornerRadius = UDim.new(0, 12) BubbleC.Parent = AlertBubble
+    local BubbleS = Instance.new("UIStroke") BubbleS.Color = Color3.fromRGB(120, 120, 130) BubbleS.Thickness = 1.8 BubbleS.Parent = AlertBubble
+
+    local WarnText = Instance.new("TextLabel")
+    WarnText.Size = UDim2.new(1, -20, 0, 45)
+    WarnText.Position = UDim2.new(0, 10, 0, 12)
+    WarnText.BackgroundTransparency = 1
+    WarnText.Text = "¿Seguro quiero cerrar este script?"
+    WarnText.TextColor3 = Color3.fromRGB(255, 255, 255)
+    WarnText.TextSize = 16
+    WarnText.Font = Enum.Font.SourceSansBold
+    WarnText.TextWrapped = true
+    WarnText.ZIndex = 11
+    WarnText.Parent = AlertBubble
+
+    local YesBtn = Instance.new("TextButton")
+    YesBtn.Size = UDim2.new(1, -20, 0, 38)
+    YesBtn.Position = UDim2.new(0, 10, 0, 65)
+    YesBtn.BackgroundColor3 = Color3.fromRGB(40, 20, 20)
+    YesBtn.Text = "Sí, quiero cerrar este script"
+    YesBtn.TextColor3 = Color3.fromRGB(255, 100, 100)
+    YesBtn.TextSize = 14
+    YesBtn.Font = Enum.Font.SourceSansBold
+    YesBtn.ZIndex = 11
+    YesBtn.Parent = AlertBubble
+
+    local YesC = Instance.new("UICorner") YesC.CornerRadius = UDim.new(0, 8) YesC.Parent = YesBtn
+    local YesS = Instance.new("UIStroke") YesS.Color = Color3.fromRGB(200, 80, 80) YesS.Parent = YesBtn
+
+    local NoBtn = Instance.new("TextButton")
+    NoBtn.Size = UDim2.new(1, -20, 0, 38)
+    NoBtn.Position = UDim2.new(0, 10, 0, 110)
+    NoBtn.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+    NoBtn.Text = "No, no quiero cerrar este script"
+    NoBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    NoBtn.TextSize = 14
+    NoBtn.Font = Enum.Font.SourceSansBold
+    NoBtn.ZIndex = 11
+    NoBtn.Parent = AlertBubble
+
+    local NoC = Instance.new("UICorner") NoC.CornerRadius = UDim.new(0, 8) NoC.Parent = NoBtn
+    local NoS = Instance.new("UIStroke") NoS.Color = Color3.fromRGB(120, 120, 130) NoS.Parent = NoBtn
+
+    YesBtn.MouseButton1Click:Connect(function() ScreenGui:Destroy() end)
+    NoBtn.MouseButton1Click:Connect(function() ConfirmOverlay:Destroy() end)
+end
+
+MinButton.MouseButton1Click:Connect(function() MainWindow.Visible = false end)
+CloseButton.MouseButton1Click:Connect(function() ShowCloseConfirmation() end)
+
+-- --- BURBUJAS DE BIENVENIDA ---
+local function ShowChatBubble(textoMensaje, delaySegundos)
+    task.delay(delaySegundos, function()
+        local Bubble = Instance.new("Frame")
+        Bubble.Size = UDim2.new(0, 280, 0, 45)
+        Bubble.Position = UDim2.new(0.5, -140, 0.35, 0)
+        Bubble.BackgroundColor3 = Color3.fromRGB(12, 12, 16)
+        Bubble.BackgroundTransparency = 0.1
+        Bubble.BorderSizePixel = 0
+        Bubble.Parent = ScreenGui
+
+        local BubbleCorner = Instance.new("UICorner") BubbleCorner.CornerRadius = UDim.new(0, 10) BubbleCorner.Parent = Bubble
+        local BubbleStroke = Instance.new("UIStroke") BubbleStroke.Color = Color3.fromRGB(120, 120, 130) BubbleStroke.Thickness = 1.5 BubbleStroke.Parent = Bubble
+
+        local MsgLabel = Instance.new("TextLabel")
+        MsgLabel.Size = UDim2.new(1, -20, 1, 0)
+        MsgLabel.Position = UDim2.new(0, 10, 0, 0)
+        MsgLabel.BackgroundTransparency = 1
+        MsgLabel.Text = textoMensaje
+        MsgLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+        MsgLabel.TextSize = 14
+        MsgLabel.Font = Enum.Font.SourceSansSemibold
+        MsgLabel.TextWrapped = true
+        MsgLabel.Parent = Bubble
+
+        TweenService:Create(Bubble, TweenInfo.new(0.3), {BackgroundTransparency = 0.1}):Play()
+        task.delay(3.5, function()
+            local t1 = TweenService:Create(Bubble, TweenInfo.new(0.3), {BackgroundTransparency = 1})
+            t1:Play()
+            t1.Completed:Connect(function() Bubble:Destroy() end)
+        end)
+    end)
+end
+
+ShowChatBubble("¡Bienvenidos! ¡Gracias por utilizar este script, se les agradece mucho!", 0.5)
+ShowChatBubble("💬 Script XzL ejecutado con éxito", 4.5)
+
+-- --- LÓGICA DE ARRASTRE ---
+local draggingBar, dragBarStart, startBarPos
+DragButton.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        draggingBar = true
+        dragBarStart = input.Position
+        startBarPos = FloatingBar.Position
+    end
+end)
+
+local draggingMenu, dragMenuStart, startMenuPos
+MenuDragButton.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        draggingMenu = true
+        dragMenuStart = input.Position
+        startMenuPos = MainWindow.Position
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        if draggingBar then
+            local delta = input.Position - dragBarStart
+            FloatingBar.Position = UDim2.new(startBarPos.X.Scale, startBarPos.X.Offset + delta.X, startBarPos.Y.Scale, startBarPos.Y.Offset + delta.Y)
+        elseif draggingMenu then
+            local delta = input.Position - dragMenuStart
+            MainWindow.Position = UDim2.new(startMenuPos.X.Scale, startMenuPos.X.Offset + delta.X, startMenuPos.Y.Scale, startMenuPos.Y.Offset + delta.Y)
+        end
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        draggingBar = false
+        draggingMenu = false
+    end
+end)
+
+ToggleMenuButton.MouseButton1Click:Connect(function()
+    MainWindow.Visible = not MainWindow.Visible
+end)
+
+print("¡XzL-Hub con interfaz y lógica completa funcional cargado con éxito!")
